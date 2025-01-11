@@ -3,18 +3,123 @@ import Dropdown from '@/Components/Dropdown';
 import NavLink from '@/Components/NavLink';
 import ResponsiveNavLink from '@/Components/ResponsiveNavLink';
 import { Link, usePage } from '@inertiajs/react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import Avatar from '@/Components/atoms/Avatar';
+import { BellIcon } from '@heroicons/react/24/outline';
+import NotificationSidebar from '@/Components/organisms/NotificationSidebar';
+import axios from 'axios';
 
 export default function AuthenticatedLayout({ header, children }) {
-    const user = usePage().props.auth.user;
+    const { user, menu_items = [] } = usePage().props.auth;
+    console.log('menu_items:', menu_items);
+    console.log('type:', typeof menu_items, Array.isArray(menu_items));
 
     const [showingNavigationDropdown, setShowingNavigationDropdown] =
         useState(false);
+    const [showNotifications, setShowNotifications] = useState(false);
+    const [notifications, setNotifications] = useState([]);
+    const [unreadCount, setUnreadCount] = useState(0);
+
+    useEffect(() => {
+        fetchNotifications();
+    }, []);
+
+    const fetchNotifications = async () => {
+        try {
+            const response = await axios.get(route('notifications.index'));
+            setNotifications(response.data);
+            setUnreadCount(response.data.filter(n => !n.read_at).length);
+        } catch (error) {
+            console.error('Error fetching notifications:', error);
+        }
+    };
+
+    const markAsRead = async (notification) => {
+        try {
+            await axios.post(route('notifications.mark-as-read', notification.id));
+            await fetchNotifications();
+        } catch (error) {
+            console.error('Error marking notification as read:', error);
+        }
+    };
+
+    const markAllAsRead = async () => {
+        try {
+            await axios.post(route('notifications.mark-all-as-read'));
+            await fetchNotifications();
+        } catch (error) {
+            console.error('Error marking all notifications as read:', error);
+        }
+    };
+
+    const renderMenuItem = (item) => {
+        if (item.type === 'dropdown') {
+            return (
+                <Dropdown key={item.id}>
+                    <Dropdown.Trigger>
+                        <button type="button" className="inline-flex items-center px-1 pt-1 text-sm font-medium leading-5 text-gray-500 transition duration-150 ease-in-out hover:text-gray-700 focus:outline-none">
+                            {item.title}
+                            <svg className="ml-2 -mr-0.5 h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                                <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
+                            </svg>
+                        </button>
+                    </Dropdown.Trigger>
+                    <Dropdown.Content>
+                        {item.children?.map(child => (
+                            <Dropdown.Link 
+                                key={child.id} 
+                                href={child.url || (child.route_name ? route(child.route_name) : '#')}
+                                type={child.type}
+                                active={child.type !== 'fixed' && route().current(child.route_name)}
+                            >
+                                {child.title}
+                            </Dropdown.Link>
+                        ))}
+                    </Dropdown.Content>
+                </Dropdown>
+            );
+        }
+
+        if (item.type === 'fixed') {
+            const href = item.url || (item.route_name ? route(item.route_name) : '#');
+            const isExternalUrl = item.url && (item.url.startsWith('http://') || item.url.startsWith('https://'));
+
+            return isExternalUrl ? (
+                <a
+                    key={item.id}
+                    href={href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center px-1 pt-1 text-sm font-medium leading-5 text-gray-500 transition duration-150 ease-in-out hover:text-gray-700 focus:outline-none"
+                >
+                    {item.title}
+                </a>
+            ) : (
+                <Link
+                    key={item.id}
+                    href={href}
+                    className="inline-flex items-center px-1 pt-1 text-sm font-medium leading-5 text-gray-500 transition duration-150 ease-in-out hover:text-gray-700 focus:outline-none"
+                >
+                    {item.title}
+                </Link>
+            );
+        }
+
+        return (
+            <NavLink
+                key={item.id}
+                href={item.url}
+                active={route().current(item.route_name)}
+            >
+                {item.title}
+            </NavLink>
+        );
+    };
 
     return (
         <div className="min-h-screen bg-gray-100">
             <nav className="bg-white shadow-sm mb-8 rounded-b-xl">
-                <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+                <div className="mx-8 max-w-12xl px-4 sm:px-6 lg:px-8">
                     <div className="flex h-16 justify-between">
                         <div className="flex">
                             <div className="flex shrink-0 items-center">
@@ -24,17 +129,32 @@ export default function AuthenticatedLayout({ header, children }) {
                             </div>
 
                             <div className="hidden space-x-8 sm:-my-px sm:ms-10 sm:flex">
-                                <NavLink
-                                    href={route('projects.index')}
-                                    active={route().current('projects.*')}
-                                >
-                                    Projects
-                                </NavLink>
+                                {menu_items.map(renderMenuItem)}
                             </div>
                         </div>
 
                         <div className="hidden sm:ms-6 sm:flex sm:items-center">
-                            <div className="relative ms-3">
+                            <button
+                                onClick={() => setShowNotifications(true)}
+                                className="relative rounded-full bg-white p-1 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+                            >
+                                <span className="sr-only">View notifications</span>
+                                <BellIcon 
+                                    className={`h-6 w-6 ${
+                                        unreadCount > 0 
+                                            ? 'text-indigo-600 hover:text-indigo-700' 
+                                            : 'text-gray-400 hover:text-gray-500'
+                                    }`} 
+                                    aria-hidden="true" 
+                                />
+                                {unreadCount > 0 && (
+                                    <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-xs font-medium text-white">
+                                        {unreadCount}
+                                    </span>
+                                )}
+                            </button>
+
+                            <div className="ml-3">
                                 <Dropdown>
                                     <Dropdown.Trigger>
                                         <span className="inline-flex rounded-md">
@@ -42,6 +162,7 @@ export default function AuthenticatedLayout({ header, children }) {
                                                 type="button"
                                                 className="inline-flex items-center rounded-md border border-transparent bg-white px-3 py-2 text-sm font-medium leading-4 text-gray-500 transition duration-150 ease-in-out hover:text-gray-700 focus:outline-none"
                                             >
+                                                <Avatar user={user} size="sm" className="mr-2" />
                                                 {user.name}
 
                                                 <svg
@@ -61,9 +182,7 @@ export default function AuthenticatedLayout({ header, children }) {
                                     </Dropdown.Trigger>
 
                                     <Dropdown.Content>
-                                        <Dropdown.Link
-                                            href={route('profile.edit')}
-                                        >
+                                        <Dropdown.Link href={route('profile.edit')}>
                                             Profile
                                         </Dropdown.Link>
                                         <Dropdown.Link
@@ -128,21 +247,29 @@ export default function AuthenticatedLayout({ header, children }) {
                     }
                 >
                     <div className="space-y-1 pb-3 pt-2">
-                        <ResponsiveNavLink
-                            href={route('projects.index')}
-                            active={route().current('projects.*')}
-                        >
-                            Projects
-                        </ResponsiveNavLink>
+                        {menu_items.map(item => (
+                            <ResponsiveNavLink
+                                key={item.id}
+                                href={item.url}
+                                active={route().current(item.route_name)}
+                            >
+                                {item.title}
+                            </ResponsiveNavLink>
+                        ))}
                     </div>
 
                     <div className="border-t border-gray-200 pb-1 pt-4">
                         <div className="px-4">
-                            <div className="text-base font-medium text-gray-800">
-                                {user.name}
-                            </div>
-                            <div className="text-sm font-medium text-gray-500">
-                                {user.email}
+                            <div className="flex items-center">
+                                <Avatar user={user} size="md" className="mr-3" />
+                                <div>
+                                    <div className="text-base font-medium text-gray-800">
+                                        {user.name}
+                                    </div>
+                                    <div className="text-sm font-medium text-gray-500">
+                                        {user.email}
+                                    </div>
+                                </div>
                             </div>
                         </div>
 
@@ -161,6 +288,15 @@ export default function AuthenticatedLayout({ header, children }) {
                     </div>
                 </div>
             </nav>
+
+            {/* Notification Sidebar */}
+            <NotificationSidebar
+                show={showNotifications}
+                onClose={() => setShowNotifications(false)}
+                notifications={notifications}
+                onMarkAsRead={markAsRead}
+                onMarkAllAsRead={markAllAsRead}
+            />
 
             {header && (
                 <header className="bg-white shadow mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">

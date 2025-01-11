@@ -1,42 +1,79 @@
 import StatusBadge from '@/Components/atoms/StatusBadge';
+import { Popover, Transition } from '@headlessui/react';
+import { InformationCircleIcon } from '@heroicons/react/24/outline';
+import { router } from '@inertiajs/react';
+import InlineText from '@/Components/atoms/InlineText';
 
-export default function ProjectInfoPopover({ project }) {
+export default function ProjectInfoPopover({ project, canEdit }) {
     return (
-        <div className="group relative">
-            <button
-                className="flex h-6 w-6 items-center justify-center rounded-full bg-gray-100 text-gray-500 hover:bg-gray-200 hover:text-gray-600"
-                aria-label="Project information"
+        <Popover className="relative">
+            <Popover.Button className="flex items-center text-gray-500 hover:text-gray-700">
+                <InformationCircleIcon className="h-5 w-5" />
+            </Popover.Button>
+
+            <Transition
+                enter="transition duration-100 ease-out"
+                enterFrom="transform scale-95 opacity-0"
+                enterTo="transform scale-100 opacity-100"
+                leave="transition duration-75 ease-out"
+                leaveFrom="transform scale-100 opacity-100"
+                leaveTo="transform scale-95 opacity-0"
             >
-                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-            </button>
-            <div className="absolute left-6 z-10 mt-2 hidden w-72 rounded-lg bg-white p-4 shadow-lg ring-1 ring-black ring-opacity-5 group-hover:block">
-                <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium text-gray-900">Status</span>
-                    <StatusBadge status={project.status} />
-                </div>
-                <div className="mt-3">
-                    <span className="text-sm font-medium text-gray-900">Description</span>
-                    <p className="mt-1 text-sm text-gray-500">
-                        {project.description || 'No description provided'}
-                    </p>
-                </div>
-                <div className="mt-3">
-                    <span className="text-sm font-medium text-gray-900">Created</span>
-                    <p className="mt-1 text-sm text-gray-500">
-                        {new Date(project.created_at).toLocaleDateString()}
-                    </p>
-                </div>
-                {project.due_date && (
-                    <div className="mt-3">
-                        <span className="text-sm font-medium text-gray-900">Due Date</span>
-                        <p className="mt-1 text-sm text-gray-500">
-                            {new Date(project.due_date).toLocaleDateString()}
-                        </p>
+                <Popover.Panel className="absolute left-1/2 z-10 mt-3 w-80 -translate-x-1/2 transform px-4">
+                    <div className="overflow-hidden rounded-lg shadow-lg ring-1 ring-black ring-opacity-5">
+                        <div className="relative bg-white p-4">
+                            <div className="space-y-4">
+                                <div>
+                                    <h4 className="text-sm font-medium text-gray-900">Description</h4>
+                                    {canEdit ? (
+                                        <InlineText
+                                            value={project.description}
+                                            route={route('projects.update', project.id)}
+                                            textClassName="mt-1 text-sm text-gray-500"
+                                            placeholder="Add a description..."
+                                        />
+                                    ) : (
+                                        <p className="mt-1 text-sm text-gray-500">
+                                            {project.description || 'No description provided.'}
+                                        </p>
+                                    )}
+                                </div>
+
+                                <div>
+                                    <h4 className="text-sm font-medium text-gray-900">Status</h4>
+                                    {canEdit ? (
+                                        <select
+                                            value={project.status}
+                                            onChange={(e) => {
+                                                router.put(route('projects.update', project.id), {
+                                                    status: e.target.value
+                                                });
+                                            }}
+                                            className="mt-1 block w-full rounded-md border-gray-300 py-1 pl-3 pr-10 text-sm focus:border-indigo-500 focus:outline-none focus:ring-indigo-500"
+                                        >
+                                            <option value="active">Active</option>
+                                            <option value="completed">Completed</option>
+                                            <option value="on_hold">On Hold</option>
+                                            <option value="canceled">Canceled</option>
+                                        </select>
+                                    ) : (
+                                        <StatusBadge status={project.status} className="mt-1" />
+                                    )}
+                                </div>
+
+                                {project.due_date && (
+                                    <div>
+                                        <h4 className="text-sm font-medium text-gray-900">Due Date</h4>
+                                        <p className="mt-1 text-sm text-gray-500">
+                                            {new Date(project.due_date).toLocaleDateString()}
+                                        </p>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
                     </div>
-                )}
-            </div>
-        </div>
+                </Popover.Panel>
+            </Transition>
+        </Popover>
     );
 } 

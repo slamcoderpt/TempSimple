@@ -23,7 +23,7 @@ class ProjectPolicy
      */
     public function view(User $user, Project $project): bool
     {
-        return $user->id === $project->user_id;
+        return $user->id === $project->user_id || $project->users()->where('user_id', $user->id)->exists();
     }
 
     /**
@@ -39,7 +39,12 @@ class ProjectPolicy
      */
     public function update(User $user, Project $project): bool
     {
-        return $user->id === $project->user_id;
+        // Project owner or admin member can update
+        return $user->id === $project->user_id || 
+               $project->users()
+                      ->where('user_id', $user->id)
+                      ->where('role', 'admin')
+                      ->exists();
     }
 
     /**
@@ -48,5 +53,49 @@ class ProjectPolicy
     public function delete(User $user, Project $project): bool
     {
         return $user->id === $project->user_id;
+    }
+
+    /**
+     * Determine whether the user can manage members in the project.
+     */
+    public function manageMembers(User $user, Project $project): bool
+    {
+        // Project owner or admin member can manage members
+        return $user->id === $project->user_id || 
+               $project->users()
+                      ->where('user_id', $user->id)
+                      ->where('role', 'admin')
+                      ->exists();
+    }
+
+    /**
+     * Determine whether the user can view all tasks in the project.
+     */
+    public function viewAllTasks(User $user, Project $project): bool
+    {
+        // Project owner or admin member can view all tasks
+        return $user->id === $project->user_id || 
+               $project->users()
+                      ->where('user_id', $user->id)
+                      ->where('role', 'admin')
+                      ->exists();
+    }
+
+    /**
+     * Determine whether the user can view specific task.
+     */
+    public function viewTask(User $user, Project $project): bool
+    {
+        // Project owner, admin, or task is assigned to user
+        return $user->id === $project->user_id || 
+               $project->users()
+                      ->where('user_id', $user->id)
+                      ->where(function ($query) use ($user) {
+                          $query->where('role', 'admin')
+                                ->orWhereHas('tasks', function ($query) use ($user) {
+                                    $query->where('assigned_to', $user->id);
+                                });
+                      })
+                      ->exists();
     }
 }

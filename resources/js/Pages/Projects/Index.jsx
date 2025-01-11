@@ -13,28 +13,27 @@ export default function Index({ projects }) {
             <Head title="Projects" />
 
             <div className="min-h-screen bg-gray-50/50">
-                <div className="mt-8 sm:mt-12">
-                    <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-                        <div className="flex items-center justify-between rounded-xl bg-white p-6 shadow-lg ring-1 ring-gray-900/5">
-                            <div className="flex items-center gap-4">
-                                <div className="rounded-lg bg-indigo-600/10 p-2.5">
-                                    <svg className="h-6 w-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-                                    </svg>
-                                </div>
-                                <h2 className="text-2xl font-semibold leading-7 text-gray-900">
-                                    Projects
-                                </h2>
+                
+                <div className="mx-12 max-w-12xl px-4 sm:px-6 lg:px-8">
+                    <div className="flex items-center justify-between rounded-xl bg-white p-6 shadow-lg ring-1 ring-gray-900/5">
+                        <div className="flex items-center gap-4">
+                            <div className="rounded-lg bg-indigo-600/10 p-2.5">
+                                <svg className="h-6 w-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                                </svg>
                             </div>
-                            <CreateProjectButton
-                                onClick={() => setShowCreateModal(true)}
-                            />
+                            <h2 className="text-2xl font-semibold leading-7 text-gray-900">
+                                Projetos
+                            </h2>
                         </div>
+                        <CreateProjectButton
+                            onClick={() => setShowCreateModal(true)}
+                        />
                     </div>
                 </div>
 
-                <div className="mt-8 pb-12">
-                    <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+                <div className="mt-4 pb-12">
+                    <div className="mx-12 max-w-12xl px-4 sm:px-6 lg:px-8">
                         {projects.length === 0 ? (
                             <div className="rounded-xl bg-white p-8 shadow-lg ring-1 ring-gray-900/5">
                                 <div className="text-center">

@@ -4,9 +4,17 @@ namespace App\Http\Middleware;
 
 use Illuminate\Http\Request;
 use Inertia\Middleware;
+use App\Services\MenuBuilder;
 
 class HandleInertiaRequests extends Middleware
 {
+    protected $menuBuilder;
+
+    public function __construct(MenuBuilder $menuBuilder)
+    {
+        $this->menuBuilder = $menuBuilder;
+    }
+
     /**
      * The root template that is loaded on the first page visit.
      *
@@ -33,6 +41,9 @@ class HandleInertiaRequests extends Middleware
             ...parent::share($request),
             'auth' => [
                 'user' => $request->user(),
+                'menu_items' => $request->user() 
+                    ? $this->menuBuilder->getMenu($request->user())
+                    : [],
             ],
         ];
     }
