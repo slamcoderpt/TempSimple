@@ -5,6 +5,9 @@ use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\TaskController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\MenuController;
+use App\Http\Controllers\ProjectPropertyController;
+use App\Http\Controllers\UserPreferenceController;
+use App\Http\Controllers\ProjectPreferenceController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Auth;
@@ -60,6 +63,18 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->name('projects.users.remove');
     Route::put('projects/{project}/users/{user}', [ProjectController::class, 'updateUser'])
         ->name('projects.users.update');
+
+    // Project Properties
+    Route::post('projects/{project}/properties', [ProjectPropertyController::class, 'store'])->name('project.properties.store');
+    Route::put('projects/{project}/properties/{property}', [ProjectPropertyController::class, 'update'])->name('project.properties.update');
+    Route::delete('projects/{project}/properties/{property}', [ProjectPropertyController::class, 'destroy'])->name('project.properties.destroy');
+    Route::post('projects/{project}/properties/reorder', [ProjectPropertyController::class, 'reorder'])->name('project.properties.reorder');
+
+    Route::put('user-preferences', [UserPreferenceController::class, 'update'])->name('user-preferences.update');
+
+    Route::put('projects/{project}/preferences', [ProjectPreferenceController::class, 'update'])
+        ->name('project.preferences.update')
+        ->middleware(['auth']);
 });
 
 require __DIR__.'/auth.php';

@@ -6,23 +6,14 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Task extends Model
 {
     use HasFactory, SoftDeletes;
 
     protected $fillable = [
-        'title',
-        'description',
-        'project_id',
-        'assigned_user_id',
-        'priority',
-        'status',
-        'due_date',
-    ];
-
-    protected $casts = [
-        'due_date' => 'date',
+        'project_id'
     ];
 
     public function project(): BelongsTo
@@ -30,8 +21,21 @@ class Task extends Model
         return $this->belongsTo(Project::class);
     }
 
-    public function assigned_user(): BelongsTo
+    public function properties(): HasMany
     {
-        return $this->belongsTo(User::class, 'assigned_user_id');
+        return $this->hasMany(TaskProperty::class);
+    }
+
+    public function getPropertyValue($propertyId)
+    {
+        return $this->properties()->where('project_property_id', $propertyId)->value('value');
+    }
+
+    public function setPropertyValue($propertyId, $value)
+    {
+        return $this->properties()->updateOrCreate(
+            ['project_property_id' => $propertyId],
+            ['value' => $value]
+        );
     }
 }

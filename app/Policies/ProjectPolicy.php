@@ -5,6 +5,7 @@ namespace App\Policies;
 use App\Models\Project;
 use App\Models\User;
 use Illuminate\Auth\Access\HandlesAuthorization;
+use Illuminate\Auth\Access\Response;
 
 class ProjectPolicy
 {
@@ -23,7 +24,9 @@ class ProjectPolicy
      */
     public function view(User $user, Project $project): bool
     {
-        return $user->id === $project->user_id || $project->users()->where('user_id', $user->id)->exists();
+        // User can view if they are the owner or a member of the project
+        return $user->id === $project->user_id || 
+               $project->members()->where('user_id', $user->id)->exists();
     }
 
     /**

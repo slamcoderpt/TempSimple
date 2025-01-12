@@ -8,7 +8,7 @@ import StackedAvatars from '@/Components/atoms/StackedAvatars';
 import InlineText from '@/Components/atoms/InlineText';
 import InlineIcon from '@/Components/atoms/InlineIcon';
 
-export default function Show({ project, users, allUsers, canEdit, canManageMembers }) {
+export default function Show({ project, users, allUsers, canEdit, canManageMembers, properties }) {
     const { auth } = usePage().props;
     const [showCreateTaskModal, setShowCreateTaskModal] = useState(false);
 
@@ -95,7 +95,14 @@ export default function Show({ project, users, allUsers, canEdit, canManageMembe
                 <div className="max-w-8xl mx-12">
                     <div className="overflow-hidden bg-white shadow-sm sm:rounded-lg">
                         <div className="p-6">
-                            <TaskList tasks={project.tasks} />
+                            <div className="flex-1 min-h-0">
+                                <TaskList 
+                                    tasks={project.tasks} 
+                                    properties={properties}
+                                    project={project}
+                                    users={users}
+                                />
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -106,6 +113,7 @@ export default function Show({ project, users, allUsers, canEdit, canManageMembe
                 onClose={() => setShowCreateTaskModal(false)}
                 project={project}
                 users={users}
+                fields={properties}
             />
         </AuthenticatedLayout>
     );

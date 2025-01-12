@@ -29,7 +29,7 @@ const STATUS_CONFIGS = {
     }
 };
 
-export default function TaskKanban({ tasks }) {
+export default function TaskKanban({ tasks, users }) {
     const [taskToDelete, setTaskToDelete] = useState(null);
 
     const confirmTaskDeletion = (task) => {
@@ -86,9 +86,9 @@ export default function TaskKanban({ tasks }) {
                                     <p className="mt-1 text-sm text-gray-500">{task.description}</p>
                                 )}
                                 <div className="mt-2 flex items-center justify-between text-xs">
-                                    {task.assigned_user && (
+                                    {task.assigned_to && (
                                         <span className="text-gray-500">
-                                            {task.assigned_user.name}
+                                            {users.find(u => u.id === task.assigned_to)?.name}
                                         </span>
                                     )}
                                     {task.due_date && (

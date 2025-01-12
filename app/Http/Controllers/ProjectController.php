@@ -6,8 +6,11 @@ use App\Models\Project;
 use Illuminate\Http\Request;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
 use App\Models\User;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Gate;
 
 class ProjectController extends Controller
 {
@@ -31,7 +34,7 @@ class ProjectController extends Controller
         ->latest()
         ->get()
         ->map(function ($project) {
-            $project->can_invite = auth()->user()->can('update', $project);
+            $project->can_invite = Gate::allows('update', $project);
             return $project;
         });
 
@@ -47,12 +50,20 @@ class ProjectController extends Controller
         // Load tasks based on user role and permissions
         if ($this->authorize('viewAllTasks', $project, false)) {
             // Admin or owner - load all tasks
-            $project->load(['tasks.assigned_user']);
+            $project->load(['tasks.properties.property', 'properties' => function($query) {
+                $query->orderBy('order');
+            }]);
         } else {
-            // Regular member - load only assigned tasks
+            // Regular member - load only assigned tasks where the user is assigned in properties
             $project->load(['tasks' => function ($query) {
-                $query->where('assigned_to', auth()->id());
-            }, 'tasks.assigned_user']);
+                $query->whereHas('properties', function ($query) {
+                    $query->whereHas('property', function ($query) {
+                        $query->where('key', 'assigned_to');
+                    })->where('value', Auth::id());
+                });
+            }, 'tasks.properties.property', 'properties' => function($query) {
+                $query->orderBy('order');
+            }]);
         }
         
         // Get project users including the owner
@@ -60,31 +71,69 @@ class ProjectController extends Controller
             ->get(['users.id', 'name', 'email'])
             ->push($project->user);
 
+        // Transform tasks to include property values
+        $tasks = $project->tasks->map(function ($task) {
+            $properties = collect($task->properties)->mapWithKeys(function ($property) {
+                return [$property->property->key => $property->value];
+            });
+            
+            return array_merge(
+                $task->only(['id', 'project_id', 'created_at', 'updated_at']),
+                $properties->toArray()
+            );
+        });
+
+        // Log for debugging
+        Log::info('Transformed tasks', [
+            'tasks' => $tasks->toArray()
+        ]);
+
         return Inertia::render('Projects/Show', [
             'project' => $project,
             'users' => $projectUsers,
-            'allUsers' => User::where('id', '!=', auth()->id())
+            'allUsers' => User::where('id', '!=', Auth::id())
                 ->whereNotIn('id', $projectUsers->pluck('id'))
                 ->get(['id', 'name', 'email']),
-            'canEdit' => auth()->user()->can('update', $project),
-            'canManageMembers' => auth()->user()->can('manageMembers', $project),
+            'canEdit' => Gate::allows('update', $project),
+            'canManageMembers' => Gate::allows('manageMembers', $project),
+            'tasks' => $tasks,
+            'properties' => $project->properties->values(),
         ]);
     }
 
     public function store(Request $request)
     {
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'description' => 'nullable|string',
-            'status' => 'required|in:active,completed,on_hold,canceled',
-            'due_date' => 'nullable|date',
-            'icon' => 'required|string|max:10',
-        ]);
+        Log::info('Project creation started', ['request_data' => $request->all()]);
 
-        $project = Auth::user()->projects()->create($validated);
+        try {
+            $validated = $request->validate([
+                'name' => 'required|string|max:255',
+                'icon' => 'required|string|max:10',
+                'description' => 'nullable|string',
+                'status' => 'required|in:active,completed,on_hold,canceled',
+                'due_date' => 'nullable|date',
+                'assigned_to' => 'nullable|exists:users,id',
+            ]);
 
-        return redirect()->route('projects.show', $project)
-            ->with('success', 'Project created successfully.');
+            $project = DB::transaction(function () use ($validated) {
+                $project = new Project($validated);
+                $project->user_id = Auth::id();
+                $project->save();
+                Log::info('Project created', ['project_id' => $project->id]);
+                return $project;
+            });
+
+            Log::info('Project creation completed', ['project_id' => $project->id]);
+
+            return redirect()->route('projects.show', $project)
+                ->with('success', 'Project created successfully.');
+        } catch (\Exception $e) {
+            Log::error('Project creation failed', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            return back()->withErrors(['error' => 'Failed to create project. ' . $e->getMessage()]);
+        }
     }
 
     public function update(Request $request, Project $project)
@@ -93,10 +142,11 @@ class ProjectController extends Controller
 
         $validated = $request->validate([
             'name' => 'sometimes|required|string|max:255',
-            'description' => 'sometimes|nullable|string',
-            'status' => 'sometimes|required|in:active,completed,on_hold,canceled',
-            'due_date' => 'sometimes|nullable|date',
             'icon' => 'sometimes|required|string|max:10',
+            'description' => 'nullable|string',
+            'status' => 'sometimes|required|in:active,completed,on_hold,canceled',
+            'due_date' => 'nullable|date',
+            'assigned_to' => 'nullable|exists:users,id',
         ]);
 
         $project->update($validated);
@@ -104,7 +154,7 @@ class ProjectController extends Controller
         if ($request->wantsJson()) {
             return response()->json([
                 'message' => 'Project updated successfully',
-                'project' => $project
+                'project' => $project->fresh()
             ]);
         }
 
@@ -140,13 +190,13 @@ class ProjectController extends Controller
         ]);
 
         // Create notification for invited user
-        $invitedUser = User::find($validated['user_id']);
+        $invitedUser = User::findOrFail($validated['user_id']);
         $invitedUser->notifications()->create([
             'type' => 'project.invitation',
-            'message' => auth()->user()->name . ' invited you to join "' . $project->name . '"',
+            'message' => Auth::user()->name . ' invited you to join "' . $project->name . '"',
             'data' => [
                 'project_id' => $project->id,
-                'inviter_id' => auth()->id(),
+                'inviter_id' => Auth::id(),
                 'role' => $validated['role']
             ],
             'action_url' => route('projects.show', $project->id)

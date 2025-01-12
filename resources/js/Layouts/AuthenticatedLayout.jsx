@@ -11,8 +11,6 @@ import axios from 'axios';
 
 export default function AuthenticatedLayout({ header, children }) {
     const { user, menu_items = [] } = usePage().props.auth;
-    console.log('menu_items:', menu_items);
-    console.log('type:', typeof menu_items, Array.isArray(menu_items));
 
     const [showingNavigationDropdown, setShowingNavigationDropdown] =
         useState(false);

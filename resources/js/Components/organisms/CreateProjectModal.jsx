@@ -9,8 +9,8 @@ import { PROJECT_ICONS } from '@/Constants/projectIcons';
 
 export default function CreateProjectModal({ show, onClose }) {
     const { data, setData, post, processing, errors, reset } = useForm({
-        name: '',
         icon: '📁',
+        name: '',
         description: '',
         status: 'active',
         due_date: '',
@@ -23,6 +23,9 @@ export default function CreateProjectModal({ show, onClose }) {
                 reset();
                 onClose();
             },
+            onError: (errors) => {
+                console.error('Project creation failed:', errors);
+            }
         });
     };
 
@@ -97,6 +100,7 @@ export default function CreateProjectModal({ show, onClose }) {
                             <option value="active">Active</option>
                             <option value="on_hold">On Hold</option>
                             <option value="completed">Completed</option>
+                            <option value="canceled">Canceled</option>
                         </select>
                         <InputError message={errors.status} className="mt-2" />
                     </div>
@@ -112,11 +116,11 @@ export default function CreateProjectModal({ show, onClose }) {
                         />
                         <InputError message={errors.due_date} className="mt-2" />
                     </div>
-                </div>
 
-                <div className="mt-6 flex justify-end gap-3">
-                    <SecondaryButton onClick={handleClose}>Cancel</SecondaryButton>
-                    <PrimaryButton disabled={processing}>Create Project</PrimaryButton>
+                    <div className="flex items-center gap-4">
+                        <PrimaryButton disabled={processing}>Create Project</PrimaryButton>
+                        <SecondaryButton type="button" onClick={handleClose}>Cancel</SecondaryButton>
+                    </div>
                 </div>
             </form>
         </Modal>

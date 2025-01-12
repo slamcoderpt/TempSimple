@@ -7,6 +7,7 @@ use App\Models\Project;
 use Illuminate\Http\Request;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 
 class TaskController extends Controller
 {
@@ -16,34 +17,54 @@ class TaskController extends Controller
     {
         $this->authorize('update', $project);
 
-        $validated = $request->validate([
-            'title' => 'required|string|max:255',
-            'description' => 'nullable|string',
-            'priority' => 'required|in:low,medium,high',
-            'status' => 'required|in:todo,in_progress,review,completed',
-            'assigned_to' => 'nullable|exists:users,id',
-            'due_date' => 'nullable|date',
-        ]);
+        try {
+            // Create task
+            $task = $project->tasks()->create();
 
-        $task = $project->tasks()->create($validated);
+            // Get all project properties to map keys to IDs
+            $propertyMap = $project->properties->pluck('id', 'key');
+            
+            // Get properties from the request
+            $properties = $request->except(['_token', '_method']);
+            
+            Log::info('Processing properties', [
+                'properties' => $properties,
+                'property_map' => $propertyMap
+            ]);
 
-        return back()->with('success', 'Task created successfully.');
+            // Save the properties
+            foreach ($properties as $key => $value) {
+                if ($value !== null && $value !== '' && isset($propertyMap[$key])) {
+                    $task->properties()->create([
+                        'project_property_id' => $propertyMap[$key],
+                        'value' => $value
+                    ]);
+                }
+            }
+
+            return redirect()->back()->with('success', 'Task created successfully');
+        } catch (\Exception $e) {
+            Log::error('Task creation failed', [
+                'error' => $e->getMessage(),
+                'properties' => $properties ?? null
+            ]);
+            
+            return redirect()->back()->withErrors(['error' => 'Failed to create task']);
+        }
     }
 
     public function update(Request $request, Task $task)
     {
         $this->authorize('update', $task->project);
 
-        $validated = $request->validate([
-            'title' => 'required|string|max:255',
-            'description' => 'nullable|string',
-            'priority' => 'required|in:low,medium,high',
-            'status' => 'required|in:todo,in_progress,review,completed',
-            'assigned_to' => 'nullable|exists:users,id',
-            'due_date' => 'nullable|date',
-        ]);
+        // Handle properties
+        $properties = $request->except(['_token', '_method']);
 
-        $task->update($validated);
+        foreach ($properties as $propertyId => $value) {
+            if (is_numeric($propertyId)) {
+                $task->setPropertyValue($propertyId, $value);
+            }
+        }
 
         return back()->with('success', 'Task updated successfully.');
     }
