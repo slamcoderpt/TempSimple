@@ -2,16 +2,10 @@ import { Fragment, useState, useEffect } from 'react';
 import clsx from 'clsx';
 import TaskTable from '@/Components/molecules/TaskTable';
 import TaskKanban from '@/Components/molecules/TaskKanban';
-import TableOptionsMenu from '@/Components/molecules/TableOptionsMenu';
-import TablePropertiesPanel from '@/Components/organisms/TablePropertiesModal';
-import TableLayoutsPanel from '@/Components/organisms/TableLayoutsModal';
 import CreateTaskModal from '@/Components/organisms/CreateTaskModal';
 
 export default function TaskList({ tasks, properties, project, users }) {
     const [selectedView, setSelectedView] = useState('table');
-    const [showPropertiesPanel, setShowPropertiesPanel] = useState(false);
-    const [showLayoutsPanel, setShowLayoutsPanel] = useState(false);
-    const [showOptionsPanel, setShowOptionsPanel] = useState(false);
     const [showCreateTaskModal, setShowCreateTaskModal] = useState(false);
     const [fields, setFields] = useState([]);
 
@@ -27,29 +21,6 @@ export default function TaskList({ tasks, properties, project, users }) {
             options: prop.options
         })));
     }, [properties]);
-
-    // Debug log to check fields
-    console.log('Fields:', fields);
-    console.log('Tasks:', tasks);
-
-    const visibleFields = fields.filter(f => f.visible);
-    console.log('Visible Fields:', visibleFields);
-
-    const handleOpenProperties = () => {
-        setShowOptionsPanel(false);
-        setShowPropertiesPanel(true);
-    };
-
-    const handleOpenLayouts = () => {
-        setShowOptionsPanel(false);
-        setShowLayoutsPanel(true);
-    };
-
-    const handleBackToOptions = () => {
-        setShowPropertiesPanel(false);
-        setShowLayoutsPanel(false);
-        setShowOptionsPanel(true);
-    };
 
     return (
         <div className="flex flex-col">
@@ -87,28 +58,9 @@ export default function TaskList({ tasks, properties, project, users }) {
             </div>
 
             <div className="flex-1 min-h-0 flex flex-col">
-                {selectedView === 'table' && (
-                    <div className="py-4 px-4 flex justify-end">
-                        <button
-                            onClick={() => setShowOptionsPanel(true)}
-                            className="rounded-md p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-500"
-                        >
-                            <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                                <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z" />
-                            </svg>
-                        </button>
-                        <TableOptionsMenu 
-                            show={showOptionsPanel}
-                            onClose={() => setShowOptionsPanel(false)}
-                            onOpenProperties={handleOpenProperties}
-                            onOpenLayouts={handleOpenLayouts}
-                        />
-                    </div>
-                )}
-
                 <div className="flex-1 min-h-0">
                     {selectedView === 'table' ? (
-                        <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
+                        <div className="bg-white mt-4 rounded-lg border border-gray-200 shadow-sm overflow-hidden">
                             <TaskTable tasks={tasks} fields={fields.filter(f => f.visible)} users={users} />
                         </div>
                     ) : (
@@ -117,22 +69,7 @@ export default function TaskList({ tasks, properties, project, users }) {
                 </div>
             </div>
 
-            <TablePropertiesPanel
-                show={showPropertiesPanel}
-                onClose={() => setShowPropertiesPanel(false)}
-                onBack={handleBackToOptions}
-                fields={fields}
-                onSave={setFields}
-                project={project}
-            />
-
-            <TableLayoutsPanel
-                show={showLayoutsPanel}
-                onClose={() => setShowLayoutsPanel(false)}
-                onBack={handleBackToOptions}
-                project={project}
-            />
-
+           
             <CreateTaskModal
                 show={showCreateTaskModal}
                 onClose={() => setShowCreateTaskModal(false)}

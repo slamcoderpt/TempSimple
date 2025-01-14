@@ -1,6 +1,5 @@
 import { Fragment, useState, useRef } from 'react';
 import { Dialog, Transition } from '@headlessui/react';
-import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { XMarkIcon, MagnifyingGlassIcon, EyeIcon, EyeSlashIcon, TrashIcon } from '@heroicons/react/24/outline';
 import AddPropertyModal from './AddPropertyModal';
 import { router } from '@inertiajs/react';
@@ -10,68 +9,6 @@ export default function TablePropertiesPanel({ show, onClose, fields, onSave, on
     const [showAddProperty, setShowAddProperty] = useState(false);
     const [editingProperty, setEditingProperty] = useState(null);
     const panelRef = useRef(null);
-
-    const handleDragEnd = (result) => {
-        if (!result.destination) return;
-
-        const items = Array.from(fields);
-        const [reorderedItem] = items.splice(result.source.index, 1);
-        items.splice(result.destination.index, 0, reorderedItem);
-        
-        onSave(items);
-        handleReorder(items);
-    };
-
-    const toggleFieldVisibility = (fieldId) => {
-        const field = fields.find(f => f.id === fieldId);
-        const updatedFields = fields.map(f =>
-            f.id === fieldId ? { ...f, visible: !f.visible } : f
-        );
-        
-        router.put(route('project.properties.update', { project: project.id, property: fieldId }), {
-            is_visible: !field.visible,
-            show_in_form: field.show_in_form
-        }, {
-            preserveScroll: true,
-            preserveState: true,
-            onSuccess: (response) => {
-                console.log('Visibility updated:', response);
-                onSave(updatedFields);
-            },
-        });
-    };
-
-    const hideAllFields = () => {
-        const updatedFields = fields.map(f => ({ ...f, visible: false }));
-        
-        Promise.all(updatedFields.map(field => 
-            router.put(route('project.properties.update', { project: project.id, property: field.id }), {
-                is_visible: false,
-                show_in_form: field.show_in_form
-            }, {
-                preserveScroll: true,
-                preserveState: true,
-            })
-        )).then(() => {
-            onSave(updatedFields);
-        });
-    };
-
-    const showAllFields = () => {
-        const updatedFields = fields.map(f => ({ ...f, visible: true }));
-        
-        Promise.all(updatedFields.map(field => 
-            router.put(route('project.properties.update', { project: project.id, property: field.id }), {
-                is_visible: true,
-                show_in_form: field.show_in_form
-            }, {
-                preserveScroll: true,
-                preserveState: true,
-            })
-        )).then(() => {
-            onSave(updatedFields);
-        });
-    };
 
     const filteredFields = fields.filter(field =>
         field.name.toLowerCase().includes(searchQuery.toLowerCase())
@@ -120,18 +57,6 @@ export default function TablePropertiesPanel({ show, onClose, fields, onSave, on
             onError: (errors) => {
                 console.error('Failed to save property:', errors);
             }
-        });
-    };
-
-    const handleReorder = (updatedFields) => {
-        router.post(route('project.properties.reorder', project.id), {
-            properties: updatedFields.map((field, index) => ({
-                id: field.id,
-                order: index,
-                is_visible: field.visible,
-            }))
-        }, {
-            preserveState: true,
         });
     };
 
@@ -205,79 +130,34 @@ export default function TablePropertiesPanel({ show, onClose, fields, onSave, on
                                                 />
                                             </div>
 
-                                            <div className="mb-2 flex items-center justify-between">
-                                                <span className="text-xs font-medium text-gray-700">Shown in table</span>
-                                                <div className="flex items-center gap-3">
-                                                    <button
-                                                        onClick={showAllFields}
-                                                        className="text-xs text-blue-600 hover:text-blue-700"
+                                            <div className="space-y-1">
+                                                {filteredFields.map((field) => (
+                                                    <div
+                                                        key={field.id}
+                                                        className="flex items-center justify-between rounded-md px-2 py-1.5 hover:bg-gray-50"
                                                     >
-                                                        Show all
-                                                    </button>
-                                                    <span className="text-xs text-gray-300">|</span>
-                                                    <button
-                                                        onClick={hideAllFields}
-                                                        className="text-xs text-blue-600 hover:text-blue-700"
-                                                    >
-                                                        Hide all
-                                                    </button>
-                                                </div>
-                                            </div>
-
-                                            <DragDropContext onDragEnd={handleDragEnd}>
-                                                <Droppable droppableId="fields">
-                                                    {(provided) => (
-                                                        <div
-                                                            {...provided.droppableProps}
-                                                            ref={provided.innerRef}
-                                                            className="space-y-1"
-                                                        >
-                                                            {filteredFields.map((field, index) => (
-                                                                <Draggable
-                                                                    key={field.id}
-                                                                    draggableId={field.id.toString()}
-                                                                    index={index}
+                                                        <div className="flex items-center gap-3 flex-1">
+                                                            <div className="flex items-center gap-2 flex-1">
+                                                                <span className="text-xl">{field.icon}</span>
+                                                                <span 
+                                                                    onClick={() => handlePropertyClick(field)}
+                                                                    className="flex-1 cursor-pointer text-sm text-gray-900 hover:text-indigo-600"
                                                                 >
-                                                                    {(provided, snapshot) => (
-                                                                        <div
-                                                                            ref={provided.innerRef}
-                                                                            {...provided.draggableProps}
-                                                                            {...provided.dragHandleProps}
-                                                                            className={`flex items-center justify-between rounded-md px-2 py-1.5 ${
-                                                                                snapshot.isDragging ? 'bg-gray-50' : 'hover:bg-gray-50'
-                                                                            }`}
-                                                                        >
-                                                                            <div className="flex items-center gap-3 flex-1">
-                                                                                <svg className="h-4 w-4 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
-                                                                                    <path d="M7 2a2 2 0 1 0 .001 4.001A2 2 0 0 0 7 2zm0 6a2 2 0 1 0 .001 4.001A2 2 0 0 0 7 8zm0 6a2 2 0 1 0 .001 4.001A2 2 0 0 0 7 14zm6-8a2 2 0 1 0-.001-4.001A2 2 0 0 0 13 6zm0 2a2 2 0 1 0 .001 4.001A2 2 0 0 0 13 8zm0 6a2 2 0 1 0 .001 4.001A2 2 0 0 0 13 14z" />
-                                                                                </svg>
-                                                                                <div className="flex items-center gap-2 flex-1">
-                                                                                    <span className="text-xl">{field.icon}</span>
-                                                                                    <span 
-                                                                                        onClick={() => handlePropertyClick(field)}
-                                                                                        className="flex-1 cursor-pointer text-sm text-gray-900 hover:text-indigo-600"
-                                                                                    >
-                                                                                        {field.name}
-                                                                                    </span>
-                                                                                </div>
-                                                                            </div>
-                                                                            <div className="flex items-center gap-2">
-                                                                                <button
-                                                                                    onClick={() => handleDeleteProperty(field.id)}
-                                                                                    className="text-gray-400 hover:text-red-500"
-                                                                                >
-                                                                                    <TrashIcon className="h-4 w-4" />
-                                                                                </button>
-                                                                            </div>
-                                                                        </div>
-                                                                    )}
-                                                                </Draggable>
-                                                            ))}
-                                                            {provided.placeholder}
+                                                                    {field.name}
+                                                                </span>
+                                                            </div>
                                                         </div>
-                                                    )}
-                                                </Droppable>
-                                            </DragDropContext>
+                                                        <div className="flex items-center gap-2">
+                                                            <button
+                                                                onClick={() => handleDeleteProperty(field.id)}
+                                                                className="text-gray-400 hover:text-red-500"
+                                                            >
+                                                                <TrashIcon className="h-4 w-4" />
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
                                         </div>
 
                                         <div className="border-t border-gray-200 p-4 space-y-4">

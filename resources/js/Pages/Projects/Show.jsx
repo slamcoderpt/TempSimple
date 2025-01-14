@@ -7,10 +7,32 @@ import ProjectInfoPopover from '@/Components/molecules/ProjectInfoPopover';
 import StackedAvatars from '@/Components/atoms/StackedAvatars';
 import InlineText from '@/Components/atoms/InlineText';
 import InlineIcon from '@/Components/atoms/InlineIcon';
+import TableOptionsMenu from '@/Components/molecules/TableOptionsMenu';
+import TablePropertiesPanel from '@/Components/organisms/TablePropertiesModal';
+import TableLayoutsPanel from '@/Components/organisms/TableLayoutsModal';
 
 export default function Show({ project, users, allUsers, canEdit, canManageMembers, properties }) {
     const { auth } = usePage().props;
     const [showCreateTaskModal, setShowCreateTaskModal] = useState(false);
+    const [showOptionsPanel, setShowOptionsPanel] = useState(false);
+    const [showPropertiesPanel, setShowPropertiesPanel] = useState(false);
+    const [showLayoutsPanel, setShowLayoutsPanel] = useState(false);
+
+    const handleOpenProperties = () => {
+        setShowOptionsPanel(false);
+        setShowPropertiesPanel(true);
+    };
+
+    const handleOpenLayouts = () => {
+        setShowOptionsPanel(false);
+        setShowLayoutsPanel(true);
+    };
+
+    const handleBackToOptions = () => {
+        setShowPropertiesPanel(false);
+        setShowLayoutsPanel(false);
+        setShowOptionsPanel(true);
+    };
 
     return (
         <AuthenticatedLayout>
@@ -71,12 +93,22 @@ export default function Show({ project, users, allUsers, canEdit, canManageMembe
                         </div>
                     </div>
                     <div className="flex items-center gap-6">
-                        <StackedAvatars 
-                            users={users} 
-                            project={project}
-                            canManageUsers={canManageMembers}
-                            availableUsers={allUsers}
-                        />
+                        <div className="flex items-center gap-4">
+                            <StackedAvatars 
+                                users={users} 
+                                project={project}
+                                canManageUsers={canManageMembers}
+                                availableUsers={allUsers}
+                            />
+                            <button
+                                onClick={() => setShowOptionsPanel(true)}
+                                className="rounded-md p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-500"
+                            >
+                                <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                    <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z" />
+                                </svg>
+                            </button>
+                        </div>
                         <button
                             onClick={() => setShowCreateTaskModal(true)}
                             className="inline-flex items-center rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
@@ -114,6 +146,28 @@ export default function Show({ project, users, allUsers, canEdit, canManageMembe
                 project={project}
                 users={users}
                 fields={properties}
+            />
+
+            <TableOptionsMenu 
+                show={showOptionsPanel}
+                onClose={() => setShowOptionsPanel(false)}
+                onOpenProperties={handleOpenProperties}
+                onOpenLayouts={handleOpenLayouts}
+            />
+
+            <TablePropertiesPanel
+                show={showPropertiesPanel}
+                onClose={() => setShowPropertiesPanel(false)}
+                onBack={handleBackToOptions}
+                fields={properties}
+                project={project}
+            />
+
+            <TableLayoutsPanel
+                show={showLayoutsPanel}
+                onClose={() => setShowLayoutsPanel(false)}
+                onBack={handleBackToOptions}
+                project={project}
             />
         </AuthenticatedLayout>
     );

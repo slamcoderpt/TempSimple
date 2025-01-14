@@ -64,7 +64,7 @@ export default function ManageUsersModal({ show, onClose, project, users }) {
                                     </div>
                                     <div className="flex items-center gap-4">
                                         <select
-                                            value={user.pivot?.role || 'member'}
+                                            value={isOwner ? 'admin' : (user.pivot?.role || 'member')}
                                             onChange={(e) => handleRoleChange(user.id, e.target.value)}
                                             disabled={processing || isOwner}
                                             className="rounded-md border-gray-300 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
