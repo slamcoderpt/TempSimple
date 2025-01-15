@@ -31,7 +31,7 @@ export default function TaskTable({ tasks: initialTasks, fields, users }) {
         [...initialTasks].sort((a, b) => a.position - b.position)
     );
     const [taskToDelete, setTaskToDelete] = useState(null);
-    const { setHoveredRow } = useTableSelection();
+    const { selectedRows, selectAll, setHoveredRow } = useTableSelection();
 
     const sensors = useSensors(
         useSensor(PointerSensor, {
@@ -156,8 +156,16 @@ export default function TaskTable({ tasks: initialTasks, fields, users }) {
                         <table className="min-w-full divide-y divide-gray-200">
                             <thead>
                                 <tr className="divide-x divide-gray-200">
-                                    {/* Controls Column Header */}
-                                    <th className="w-16" />
+                                    <TableHeader className="w-16 px-2">
+                                        <div className="flex items-center justify-center">
+                                            <input
+                                                type="checkbox"
+                                                className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-600"
+                                                checked={tasks.length > 0 && tasks.every(task => selectedRows.has(task.id))}
+                                                onChange={() => selectAll(tasks.map(task => task.id))}
+                                            />
+                                        </div>
+                                    </TableHeader>
                                     {fields.map((field, index) => (
                                         <TableHeader key={field.id}>
                                             <div className="flex items-center gap-1.5">

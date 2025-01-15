@@ -22,13 +22,25 @@ export function TableSelectionProvider({ children }) {
         setSelectedRows(new Set());
     };
 
+    const selectAll = (taskIds) => {
+        setSelectedRows(prev => {
+            // If all tasks are already selected, deselect all
+            if (taskIds.every(id => prev.has(id))) {
+                return new Set();
+            }
+            // Otherwise, select all tasks
+            return new Set(taskIds);
+        });
+    };
+
     return (
         <TableSelectionContext.Provider value={{
             selectedRows,
             hoveredRow,
             setHoveredRow,
             toggleRowSelection,
-            clearSelection
+            clearSelection,
+            selectAll
         }}>
             {children}
         </TableSelectionContext.Provider>
