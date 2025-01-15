@@ -16,13 +16,11 @@ class ProjectProperty extends Model
         'type',
         'icon',
         'is_visible',
-        'show_in_form',
         'order',
         'options'
     ];
 
     protected $casts = [
-        'show_in_form' => 'boolean',
         'is_visible' => 'boolean',
         'options' => 'array'
     ];

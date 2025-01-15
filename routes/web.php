@@ -34,6 +34,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     // Tasks
     Route::post('/projects/{project}/tasks', [TaskController::class, 'store'])->name('tasks.store');
+    Route::delete('/tasks/bulk-delete', [TaskController::class, 'bulkDelete'])->name('tasks.bulk-delete');
+    Route::post('/tasks/bulk-duplicate', [TaskController::class, 'bulkDuplicate'])->name('tasks.bulk-duplicate');
+    Route::post('/tasks/reorder', [TaskController::class, 'reorder'])->name('tasks.reorder');
     Route::patch('/tasks/{task}', [TaskController::class, 'update'])->name('tasks.update');
     Route::delete('/tasks/{task}', [TaskController::class, 'destroy'])->name('tasks.destroy');
 

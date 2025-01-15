@@ -6,6 +6,7 @@ use App\Models\Project;
 use App\Models\ProjectProperty;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
+use Illuminate\Validation\Rule;
 
 class ProjectPropertyController extends Controller
 {
@@ -13,22 +14,20 @@ class ProjectPropertyController extends Controller
     {
         $validated = $request->validate([
             'name' => 'required|string|max:255',
-            'key' => 'required|string|max:255',
+            'key' => [
+                'required',
+                'string',
+                'max:255',
+                Rule::unique('project_properties')->where(function ($query) use ($project) {
+                    return $query->where('project_id', $project->id);
+                })
+            ],
             'type' => 'required|string|in:text,select,date,user',
-            'icon' => 'required|string|max:10',
+            'icon' => 'required|string',
             'is_visible' => 'boolean',
-            'show_in_form' => 'boolean',
-            'options' => 'array',
-            'options.values' => 'array|required_if:type,select',
-            'options.isMultiple' => 'boolean',
-            'options.notifyOnChange' => 'boolean',
-            'options.includeTime' => 'boolean',
-            'options.allowRange' => 'boolean',
-            'options.defaultToToday' => 'boolean',
+            'options' => 'nullable|array',
+            'order' => 'nullable|integer'
         ]);
-
-        // Get the last order number and increment it
-        $lastOrder = $project->properties()->max('order') ?? 0;
 
         $property = $project->properties()->create([
             'name' => $validated['name'],
@@ -36,16 +35,8 @@ class ProjectPropertyController extends Controller
             'type' => $validated['type'],
             'icon' => $validated['icon'],
             'is_visible' => $validated['is_visible'] ?? true,
-            'show_in_form' => $validated['show_in_form'] ?? false,
-            'order' => $lastOrder + 1,
-            'options' => [
-                'values' => $validated['options']['values'] ?? [],
-                'isMultiple' => $validated['options']['isMultiple'] ?? false,
-                'notifyOnChange' => $validated['options']['notifyOnChange'] ?? false,
-                'includeTime' => $validated['options']['includeTime'] ?? false,
-                'allowRange' => $validated['options']['allowRange'] ?? false,
-                'defaultToToday' => $validated['options']['defaultToToday'] ?? false,
-            ],
+            'order' => $validated['order'] ?? null,
+            'options' => $validated['options'] ?? null
         ]);
 
         $property->refresh();
@@ -65,33 +56,23 @@ class ProjectPropertyController extends Controller
     public function update(Request $request, Project $project, ProjectProperty $property)
     {
         $validated = $request->validate([
-            'name' => 'sometimes|string|max:255',
-            'key' => 'sometimes|string|max:255',
-            'type' => 'sometimes|string|in:text,select,date,user',  // This matches the frontend options
-            'icon' => 'required|string|max:10',
+            'name' => 'sometimes|required|string|max:255',
+            'key' => [
+                'sometimes',
+                'required',
+                'string',
+                'max:255',
+                Rule::unique('project_properties')->where(function ($query) use ($project, $property) {
+                    return $query->where('project_id', $project->id)
+                                ->where('id', '!=', $property->id);
+                })
+            ],
+            'type' => 'sometimes|required|string|in:text,select,date,user',
+            'icon' => 'sometimes|required|string',
             'is_visible' => 'sometimes|boolean',
-            'show_in_form' => 'sometimes|boolean',
-            'options' => 'sometimes|array',
-            'options.values' => 'array|required_if:type,select',
-            'options.isMultiple' => 'boolean',
-            'options.notifyOnChange' => 'boolean',
-            'options.includeTime' => 'boolean',
-            'options.allowRange' => 'boolean',
-            'options.defaultToToday' => 'boolean',
+            'options' => 'sometimes|nullable|array',
+            'order' => 'sometimes|nullable|integer'
         ]);
-
-        // If updating options, ensure boolean values are properly cast
-        if (isset($validated['options'])) {
-            $validated['options'] = array_merge($property->options ?? [], $validated['options']);
-            
-            // Explicitly cast boolean options
-            $booleanOptions = ['isMultiple', 'notifyOnChange', 'includeTime', 'allowRange', 'defaultToToday'];
-            foreach ($booleanOptions as $option) {
-                if (isset($validated['options'][$option])) {
-                    $validated['options'][$option] = (bool) $validated['options'][$option];
-                }
-            }
-        }
 
         $property->update($validated);
         $property->refresh();

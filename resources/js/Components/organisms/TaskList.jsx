@@ -3,6 +3,7 @@ import clsx from 'clsx';
 import TaskTable from '@/Components/molecules/TaskTable';
 import TaskKanban from '@/Components/molecules/TaskKanban';
 import CreateTaskModal from '@/Components/organisms/CreateTaskModal';
+import { TableSelectionProvider } from '@/Components/context/TableSelectionContext';
 
 export default function TaskList({ tasks, properties, project, users }) {
     const [selectedView, setSelectedView] = useState('table');
@@ -17,10 +18,13 @@ export default function TaskList({ tasks, properties, project, users }) {
             type: prop.type,
             icon: prop.icon,
             visible: prop.is_visible,
-            show_in_form: prop.show_in_form,
             options: prop.options
         })));
     }, [properties]);
+
+    const handleModalClose = () => {
+        setShowCreateTaskModal(false);
+    };
 
     return (
         <div className="flex flex-col">
@@ -60,19 +64,20 @@ export default function TaskList({ tasks, properties, project, users }) {
             <div className="flex-1 min-h-0 flex flex-col">
                 <div className="flex-1 min-h-0">
                     {selectedView === 'table' ? (
-                        <div className="bg-white mt-4 rounded-lg border border-gray-200 shadow-sm overflow-hidden">
-                            <TaskTable tasks={tasks} fields={fields.filter(f => f.visible)} users={users} />
-                        </div>
+                        <TableSelectionProvider>
+                            <div className="bg-white mt-4 rounded-lg border border-gray-200 shadow-sm overflow-hidden">
+                                <TaskTable tasks={tasks} fields={fields.filter(f => f.visible)} users={users} />
+                            </div>
+                        </TableSelectionProvider>
                     ) : (
                         <TaskKanban tasks={tasks} users={users} />
                     )}
                 </div>
             </div>
 
-           
             <CreateTaskModal
                 show={showCreateTaskModal}
-                onClose={() => setShowCreateTaskModal(false)}
+                onClose={handleModalClose}
                 fields={fields.filter(f => f.visible)}
                 project={project}
                 users={users}

@@ -8,6 +8,7 @@ import Avatar from '@/Components/atoms/Avatar';
 import { BellIcon } from '@heroicons/react/24/outline';
 import NotificationSidebar from '@/Components/organisms/NotificationSidebar';
 import axios from 'axios';
+import { Toaster } from 'react-hot-toast';
 
 export default function AuthenticatedLayout({ header, children }) {
     const { user, menu_items = [] } = usePage().props.auth;
@@ -303,6 +304,7 @@ export default function AuthenticatedLayout({ header, children }) {
             )}
 
             <main>{children}</main>
+            <Toaster />
         </div>
     );
 }

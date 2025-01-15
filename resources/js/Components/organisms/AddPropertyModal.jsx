@@ -9,40 +9,60 @@ import PrimaryButton from '@/Components/PrimaryButton';
 import SecondaryButton from '@/Components/SecondaryButton';
 import { router } from '@inertiajs/react';
 import { PROPERTY_ICONS } from '@/Constants/propertyIcons';
+import { PROPERTY_COLORS } from '@/Constants/propertyColors';
+import ColorPicker from '@/Components/atoms/ColorPicker';
+
+function slugify(text) {
+    return text
+        .toString()
+        .toLowerCase()
+        .trim()
+        .replace(/\s+/g, '-')     // Replace spaces with -
+        .replace(/[^\w\-]+/g, '') // Remove all non-word chars
+        .replace(/\-\-+/g, '-');  // Replace multiple - with single -
+}
 
 export default function AddPropertyModal({ show, onClose, onSave, editingProperty, project }) {
-    const [data, setData] = useState({
+    const [data, setData] = useState(editingProperty ? {
+        name: editingProperty.name,
+        key: editingProperty.key,
+        type: editingProperty.type,
+        icon: editingProperty.icon,
+        hidden: !editingProperty.is_visible,
+        options: {
+            ...editingProperty.options,
+            values: editingProperty.options?.values || [],
+            isMultiple: editingProperty.options?.isMultiple || false,
+            notifyOnChange: editingProperty.options?.notifyOnChange || false
+        },
+    } : {
         name: '',
         key: '',
         type: 'text',
         icon: '📝',
-        hideInForm: true,
-        isMultiple: false,
-        notifyOnChange: false,
-        includeTime: false,
-        allowRange: false,
-        defaultToToday: false,
-        options: { values: [] }
+        hidden: false,
+        options: {
+            values: [],
+            isMultiple: false,
+            notifyOnChange: false
+        },
     });
 
     useEffect(() => {
         if (editingProperty) {
             console.log('Editing property:', editingProperty);
-            console.log('show_in_form:', editingProperty.show_in_form);
             setData({
                 name: editingProperty.name,
                 key: editingProperty.key,
                 type: editingProperty.type,
                 icon: editingProperty.icon || '📝',
-                hideInForm: !editingProperty.show_in_form,
-                isMultiple: editingProperty.options?.isMultiple || false,
-                notifyOnChange: editingProperty.options?.notifyOnChange || false,
-                includeTime: editingProperty.options?.includeTime || false,
-                allowRange: editingProperty.options?.allowRange || false,
-                defaultToToday: editingProperty.options?.defaultToToday || false,
-                options: { 
-                    values: editingProperty.options?.values || [] 
-                }
+                hidden: !editingProperty.is_visible,
+                options: {
+                    ...editingProperty.options,
+                    values: editingProperty.options?.values || [],
+                    isMultiple: editingProperty.options?.isMultiple || false,
+                    notifyOnChange: editingProperty.options?.notifyOnChange || false
+                },
             });
         } else {
             setData({
@@ -50,13 +70,12 @@ export default function AddPropertyModal({ show, onClose, onSave, editingPropert
                 key: '',
                 type: 'text',
                 icon: '📝',
-                hideInForm: true,
-                isMultiple: false,
-                notifyOnChange: false,
-                includeTime: false,
-                allowRange: false,
-                defaultToToday: false,
-                options: { values: [] }
+                hidden: false,
+                options: {
+                    values: [],
+                    isMultiple: false,
+                    notifyOnChange: false
+                },
             });
         }
     }, [editingProperty]);
@@ -67,42 +86,23 @@ export default function AddPropertyModal({ show, onClose, onSave, editingPropert
     const handleSubmit = (e) => {
         e.preventDefault();
         
-        // Basic validation
-        const newErrors = {};
-        if (!data.name.trim()) newErrors.name = 'Name is required';
-        if (!data.icon) newErrors.icon = 'Icon is required';
-        if (data.type === 'select' && data.options.values.length === 0) {
-            newErrors.options = 'At least one option is required';
-        }
-        
-        if (Object.keys(newErrors).length > 0) {
-            setErrors(newErrors);
-            return;
-        }
-
-        // Generate key from name automatically if not editing
-        const key = editingProperty ? data.key : data.name.toLowerCase().replace(/[^a-z0-9]+/g, '_');
-        
-        // Prepare the data to be sent
-        const propertyData = {
+        const property = {
+            ...editingProperty,
             name: data.name,
-            key,
+            key: data.key,
             type: data.type,
             icon: data.icon,
-            show_in_form: !data.hideInForm,
-            is_visible: editingProperty ? editingProperty.is_visible : true,
+            is_visible: !data.hidden,
             options: {
-                values: data.options.values,
-                isMultiple: data.isMultiple,
-                notifyOnChange: data.notifyOnChange,
-                includeTime: data.includeTime,
-                allowRange: data.allowRange,
-                defaultToToday: data.defaultToToday,
+                ...data.options,
+                values: data.options.values || [],
+                isMultiple: data.options.isMultiple || false,
+                notifyOnChange: data.options.notifyOnChange || false
             }
         };
 
-        console.log('Submitting property data:', propertyData);
-        onSave(propertyData);
+        console.log('Submitting property data:', property);
+        onSave(property);
         handleClose();
     };
 
@@ -112,13 +112,12 @@ export default function AddPropertyModal({ show, onClose, onSave, editingPropert
             key: '',
             type: 'text',
             icon: '📝',
-            hideInForm: true,
-            isMultiple: false,
-            notifyOnChange: false,
-            includeTime: false,
-            allowRange: false,
-            defaultToToday: false,
-            options: { values: [] }
+            hidden: false,
+            options: {
+                values: [],
+                isMultiple: false,
+                notifyOnChange: false
+            },
         });
         setNewOption('');
         setErrors({});
@@ -127,10 +126,17 @@ export default function AddPropertyModal({ show, onClose, onSave, editingPropert
 
     const addOption = () => {
         if (newOption.trim()) {
+            const label = newOption.trim();
+            const option = {
+                value: slugify(label),
+                label: label,
+                color: 'gray'
+            };
             setData({
                 ...data,
                 options: {
-                    values: [...data.options.values, newOption.trim()]
+                    ...data.options,
+                    values: [...(data.options.values || []), option]
                 }
             });
             setNewOption('');
@@ -138,24 +144,45 @@ export default function AddPropertyModal({ show, onClose, onSave, editingPropert
     };
 
     const removeOption = (index) => {
-        const newValues = [...data.options.values];
+        const newValues = [...(data.options.values || [])];
         newValues.splice(index, 1);
         setData({
             ...data,
-            options: { values: newValues }
+            options: {
+                ...data.options,
+                values: newValues
+            }
         });
     };
 
     const handleDragEnd = (result) => {
         if (!result.destination) return;
 
-        const newValues = Array.from(data.options.values);
+        const newValues = Array.from(data.options.values || []);
         const [reorderedItem] = newValues.splice(result.source.index, 1);
         newValues.splice(result.destination.index, 0, reorderedItem);
 
         setData({
             ...data,
-            options: { values: newValues }
+            options: {
+                ...data.options,
+                values: newValues
+            }
+        });
+    };
+
+    const updateOptionColor = (index, color) => {
+        const newValues = [...(data.options.values || [])];
+        newValues[index] = {
+            ...newValues[index],
+            color
+        };
+        setData({
+            ...data,
+            options: {
+                ...data.options,
+                values: newValues
+            }
         });
     };
 
@@ -241,25 +268,20 @@ export default function AddPropertyModal({ show, onClose, onSave, editingPropert
                                             </div>
 
                                             <div className="space-y-3">
-                                                <div className="flex items-center gap-2">
-                                                    <input
-                                                        type="checkbox"
-                                                        id="hideInForm"
-                                                        className="rounded border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500"
-                                                        checked={data.hideInForm}
-                                                        onChange={e => setData({ ...data, hideInForm: e.target.checked })}
-                                                    />
-                                                    <InputLabel htmlFor="hideInForm" value="Hide in form" />
-                                                </div>
-
                                                 {(data.type === 'select' || data.type === 'user') && (
                                                     <div className="flex items-center gap-2">
                                                         <input
                                                             type="checkbox"
                                                             id="isMultiple"
                                                             className="rounded border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500"
-                                                            checked={data.isMultiple}
-                                                            onChange={e => setData({ ...data, isMultiple: e.target.checked })}
+                                                            checked={data.options.isMultiple}
+                                                            onChange={e => setData({
+                                                                ...data,
+                                                                options: {
+                                                                    ...data.options,
+                                                                    isMultiple: e.target.checked
+                                                                }
+                                                            })}
                                                         />
                                                         <InputLabel htmlFor="isMultiple" value="Allow multiple selections" />
                                                     </div>
@@ -271,8 +293,14 @@ export default function AddPropertyModal({ show, onClose, onSave, editingPropert
                                                             type="checkbox"
                                                             id="notifyOnChange"
                                                             className="rounded border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500"
-                                                            checked={data.notifyOnChange}
-                                                            onChange={e => setData({ ...data, notifyOnChange: e.target.checked })}
+                                                            checked={data.options.notifyOnChange}
+                                                            onChange={e => setData({
+                                                                ...data,
+                                                                options: {
+                                                                    ...data.options,
+                                                                    notifyOnChange: e.target.checked
+                                                                }
+                                                            })}
                                                         />
                                                         <InputLabel htmlFor="notifyOnChange" value="Notify user on change" />
                                                     </div>
@@ -315,79 +343,78 @@ export default function AddPropertyModal({ show, onClose, onSave, editingPropert
                                             </div>
 
                                             {data.type === 'select' && (
-                                                <div>
-                                                    <InputLabel value="Options" />
-                                                    <div className="mt-2 space-y-2">
-                                                        <DragDropContext onDragEnd={handleDragEnd}>
-                                                            <Droppable droppableId="options">
-                                                                {(provided) => (
-                                                                    <div
-                                                                        {...provided.droppableProps}
-                                                                        ref={provided.innerRef}
-                                                                        className="space-y-2"
-                                                                    >
-                                                                        {data.options.values.map((option, index) => (
-                                                                            <Draggable
-                                                                                key={option}
-                                                                                draggableId={option}
-                                                                                index={index}
-                                                                            >
-                                                                                {(provided, snapshot) => (
-                                                                                    <div
-                                                                                        ref={provided.innerRef}
-                                                                                        {...provided.draggableProps}
-                                                                                        {...provided.dragHandleProps}
-                                                                                        className={`flex items-center gap-2 ${
-                                                                                            snapshot.isDragging ? 'opacity-50' : ''
-                                                                                        }`}
-                                                                                    >
-                                                                                        <div className="flex-1 flex items-center gap-2">
-                                                                                            <svg className="h-5 w-5 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
-                                                                                                <path d="M4 4a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V4zm8 0a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 01-1 1h-2a1 1 0 01-1-1V4zM4 9a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V9zm8 0a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 01-1 1h-2a1 1 0 01-1-1V9zm-8 5a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1v-2zm8 0a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 01-1 1h-2a1 1 0 01-1-1v-2z" />
-                                                                                            </svg>
-                                                                                            <span className="flex-1 px-3 py-1.5 bg-gray-50 rounded-md text-sm text-gray-900">
-                                                                                                {option}
-                                                                                            </span>
-                                                                                        </div>
-                                                                                        <button
-                                                                                            type="button"
-                                                                                            onClick={() => removeOption(index)}
-                                                                                            className="text-gray-400 hover:text-gray-500"
+                                                <div className="space-y-4">
+                                                    <div>
+                                                        <InputLabel value="Options" />
+                                                        <div className="mt-2 space-y-2">
+                                                            <div className="flex gap-2">
+                                                                <TextInput
+                                                                    type="text"
+                                                                    className="flex-1"
+                                                                    value={newOption}
+                                                                    onChange={e => setNewOption(e.target.value)}
+                                                                    placeholder="Add an option..."
+                                                                    onKeyPress={e => {
+                                                                        if (e.key === 'Enter') {
+                                                                            e.preventDefault();
+                                                                            addOption();
+                                                                        }
+                                                                    }}
+                                                                />
+                                                                <PrimaryButton type="button" onClick={addOption}>
+                                                                    Add
+                                                                </PrimaryButton>
+                                                            </div>
+
+                                                            <DragDropContext onDragEnd={handleDragEnd}>
+                                                                <Droppable droppableId="options">
+                                                                    {(provided) => (
+                                                                        <div
+                                                                            {...provided.droppableProps}
+                                                                            ref={provided.innerRef}
+                                                                            className="space-y-2"
+                                                                        >
+                                                                            {(data.options.values || []).map((option, index) => (
+                                                                                <Draggable
+                                                                                    key={option.value}
+                                                                                    draggableId={option.value}
+                                                                                    index={index}
+                                                                                >
+                                                                                    {(provided, snapshot) => (
+                                                                                        <div
+                                                                                            ref={provided.innerRef}
+                                                                                            {...provided.draggableProps}
+                                                                                            {...provided.dragHandleProps}
+                                                                                            className={`flex items-center justify-between rounded-lg bg-white border border-gray-200 p-2 ${
+                                                                                                snapshot.isDragging ? 'opacity-50' : ''
+                                                                                            }`}
                                                                                         >
-                                                                                            <XMarkIcon className="h-5 w-5" />
-                                                                                        </button>
-                                                                                    </div>
-                                                                                )}
-                                                                            </Draggable>
-                                                                        ))}
-                                                                        {provided.placeholder}
-                                                                    </div>
-                                                                )}
-                                                            </Droppable>
-                                                        </DragDropContext>
-                                                        <div className="flex gap-2">
-                                                            <TextInput
-                                                                type="text"
-                                                                className="flex-1"
-                                                                placeholder="Add new option"
-                                                                value={newOption}
-                                                                onChange={e => setNewOption(e.target.value)}
-                                                                onKeyPress={e => {
-                                                                    if (e.key === 'Enter') {
-                                                                        e.preventDefault();
-                                                                        addOption();
-                                                                    }
-                                                                }}
-                                                            />
-                                                            <button
-                                                                type="button"
-                                                                onClick={addOption}
-                                                                className="inline-flex items-center rounded-md bg-white px-2.5 py-1.5 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
-                                                            >
-                                                                <PlusIcon className="h-5 w-5" />
-                                                            </button>
+                                                                                            <div className="flex items-center gap-3 flex-1">
+                                                                                                <ColorPicker
+                                                                                                    color={option.color}
+                                                                                                    onChange={(color) => updateOptionColor(index, color)}
+                                                                                                />
+                                                                                                <span className="text-gray-900">
+                                                                                                    {option.label}
+                                                                                                </span>
+                                                                                            </div>
+                                                                                            <button
+                                                                                                type="button"
+                                                                                                onClick={() => removeOption(index)}
+                                                                                                className="text-gray-400 hover:text-red-500"
+                                                                                            >
+                                                                                                <XMarkIcon className="h-4 w-4" />
+                                                                                            </button>
+                                                                                        </div>
+                                                                                    )}
+                                                                                </Draggable>
+                                                                            ))}
+                                                                            {provided.placeholder}
+                                                                        </div>
+                                                                    )}
+                                                                </Droppable>
+                                                            </DragDropContext>
                                                         </div>
-                                                        <InputError message={errors.options} className="mt-1" />
                                                     </div>
                                                 </div>
                                             )}

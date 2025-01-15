@@ -8,6 +8,8 @@ use Illuminate\Http\Request;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\DB;
+use Inertia\Inertia;
 
 class TaskController extends Controller
 {
@@ -42,7 +44,8 @@ class TaskController extends Controller
                 }
             }
 
-            return redirect()->back()->with('success', 'Task created successfully');
+            // Perform a full page refresh
+            return Inertia::location(route('projects.show', $project->id));
         } catch (\Exception $e) {
             Log::error('Task creation failed', [
                 'error' => $e->getMessage(),
@@ -76,5 +79,88 @@ class TaskController extends Controller
         $task->delete();
 
         return back()->with('success', 'Task deleted successfully.');
+    }
+
+    public function bulkDelete(Request $request)
+    {
+        $request->validate([
+            'tasks' => ['required', 'array'],
+            'tasks.*' => ['required', 'integer', 'exists:tasks,id']
+        ]);
+
+        // Get all tasks
+        $tasks = Task::whereIn('id', $request->tasks)->get();
+        
+        // Get unique project IDs and check authorization for each project
+        $projectIds = $tasks->pluck('project_id')->unique();
+        foreach ($projectIds as $projectId) {
+            $project = Project::findOrFail($projectId);
+            $this->authorize('update', $project);
+        }
+
+        // Delete all tasks
+        Task::whereIn('id', $request->tasks)->delete();
+
+        return redirect()->back()->with('success', 'Tasks deleted successfully.');
+    }
+
+    public function bulkDuplicate(Request $request)
+    {
+        $request->validate([
+            'tasks' => ['required', 'array'],
+            'tasks.*' => ['required', 'integer', 'exists:tasks,id']
+        ]);
+
+        // Get all tasks
+        $tasks = Task::whereIn('id', $request->tasks)->get();
+        
+        // Get unique project IDs and check authorization for each project
+        $projectIds = $tasks->pluck('project_id')->unique();
+        foreach ($projectIds as $projectId) {
+            $project = Project::findOrFail($projectId);
+            $this->authorize('update', $project);
+        }
+
+        // Duplicate each task
+        foreach ($tasks as $task) {
+            $newTask = $task->project->tasks()->create();
+            
+            // Copy all properties
+            foreach ($task->properties as $property) {
+                $newTask->properties()->create([
+                    'project_property_id' => $property->project_property_id,
+                    'value' => $property->value
+                ]);
+            }
+        }
+
+        return redirect()->back()->with('success', 'Tasks duplicated successfully.');
+    }
+
+    public function reorder(Request $request)
+    {
+        $request->validate([
+            'tasks' => ['required', 'array'],
+            'tasks.*.id' => ['required', 'integer', 'exists:tasks,id'],
+            'tasks.*.position' => ['required', 'numeric']
+        ]);
+
+        // Get all tasks and check authorization
+        $tasks = Task::whereIn('id', collect($request->tasks)->pluck('id'))->get();
+        $projectIds = $tasks->pluck('project_id')->unique();
+        foreach ($projectIds as $projectId) {
+            $project = Project::findOrFail($projectId);
+            $this->authorize('update', $project);
+        }
+
+        // Update position
+        DB::transaction(function () use ($request) {
+            foreach ($request->tasks as $taskData) {
+                Task::where('id', $taskData['id'])
+                    ->update(['position' => $taskData['position']]);
+            }
+        });
+
+        return redirect()->back()->with('success', 'Tasks reordered successfully');
     }
 }

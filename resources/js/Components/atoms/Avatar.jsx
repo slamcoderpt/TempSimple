@@ -25,6 +25,7 @@ export default function Avatar({
     showStatus = false 
 }) {
     const sizeClasses = {
+        xs: 'h-6 w-6 text-xs',
         sm: 'h-8 w-8 text-sm',
         md: 'h-10 w-10 text-base',
         lg: 'h-12 w-12 text-lg',
@@ -41,7 +42,7 @@ export default function Avatar({
     return (
         <div className="relative inline-block">
             <div
-                className={`relative inline-flex items-center justify-center overflow-hidden rounded-full bg-cover bg-center ${sizeClasses[size]} ${className}`}
+                className={`relative inline-flex items-center justify-center overflow-hidden rounded-full bg-cover bg-center bg-no-repeat ${sizeClasses[size]} ${className}`}
                 style={user.avatar_url ? {
                     backgroundImage: `url(${user.avatar_url})`
                 } : {
